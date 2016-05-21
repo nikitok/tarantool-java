@@ -27,6 +27,12 @@ public class TarantoolConnection16Impl extends TarantoolConnection16Base<Integer
         this(SocketChannel.open(new InetSocketAddress(host, port)));
     }
 
+
+    @Override
+    protected int write(ByteBuffer buffer) {
+        return super.write(buffer);
+    }
+
     public List exec(Code code, Object... args) {
         write(code, args);
         return (List) readData();

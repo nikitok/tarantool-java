@@ -12,12 +12,8 @@ import org.tarantool.schema.TarantoolConnectionSchemaAware;
 
 public abstract class TarantoolConnection16Base<T,O,P,R> extends AbstractTarantoolConnection16<T,O,P,R> implements TarantoolConnectionSchemaAware {
     protected final SocketChannel channel;
-    protected final ConnectionState state;
-    protected final String salt;
 
-    protected ConnectionState getState() {
-        return state;
-    }
+    protected final String salt;
 
     public TarantoolConnection16Base(SocketChannel channel) {
         try {
