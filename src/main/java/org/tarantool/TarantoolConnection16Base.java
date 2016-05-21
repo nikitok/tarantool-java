@@ -14,19 +14,20 @@ public abstract class TarantoolConnection16Base<T,O,P,R> extends AbstractTaranto
     protected final SocketChannel channel;
 
     protected final String salt;
+    protected final ConnectionState welcomeState;
 
     public TarantoolConnection16Base(SocketChannel channel) {
         try {
             this.channel = channel;
-            this.state = new ConnectionState();
-            ByteBuffer welcome = state.getWelcomeBuffer();
+            this.welcomeState = new ConnectionState();
+            ByteBuffer welcome = welcomeState.getWelcomeBuffer();
             readFully(welcome);
             String firstLine = new String(welcome.array(), 0, welcome.position());
             if (!firstLine.startsWith("Tarantool")) {
                 channel.close();
                 throw new CommunicationException("Welcome message should starts with tarantool but starts with '" + firstLine + "'");
             }
-            welcome = state.getWelcomeBuffer();
+            welcome = welcomeState.getWelcomeBuffer();
             readFully(welcome);
             this.salt = new String(welcome.array(), 0, welcome.position());
         } catch (IOException e) {
@@ -50,11 +51,12 @@ public abstract class TarantoolConnection16Base<T,O,P,R> extends AbstractTaranto
     }
 
     protected Object readData() {
-        readPacket();
+        ConnectionState state = readPacket();
         return state.getBody().get(Key.DATA);
     }
 
-    protected void readPacket() {
+    protected ConnectionState readPacket() {
+        ConnectionState state = new ConnectionState();
         readFully(state.getLengthReadBuffer());
         readFully(state.getPacketReadBuffer());
         state.unpack();
@@ -63,6 +65,7 @@ public abstract class TarantoolConnection16Base<T,O,P,R> extends AbstractTaranto
             Object error = state.getBody().get(Key.ERROR);
             throw new TarantoolException((int) code, error instanceof String ? (String) error : new String((byte[]) error));
         }
+        return state;
     }
 
     protected int write(ByteBuffer buffer) {
@@ -114,12 +117,13 @@ public abstract class TarantoolConnection16Base<T,O,P,R> extends AbstractTaranto
 
 
     protected int write(Code code, Object[] args) {
+        ConnectionState state = new ConnectionState();
         return write(state.pack(code, args));
     }
 
     @Override
     public Long getSchemaId() {
-        return (Long) getState().getHeader().get(Key.SCHEMA_ID);
+        return (Long) welcomeState.getHeader().get(Key.SCHEMA_ID);
     }
 
     public void close() {
